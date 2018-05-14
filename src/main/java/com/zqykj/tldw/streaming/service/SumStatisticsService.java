@@ -5,6 +5,8 @@ import com.zqykj.tldw.streaming.entity.SumStatistics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * Created by weifeng on 2018/5/7.
  */
@@ -18,12 +20,12 @@ public class SumStatisticsService {
         sumStatisticsDao.save(sumStatistics);
     }
 
-    public SumStatistics findByMetricName(String metricName) {
+    public List<SumStatistics> findByMetricName(String metricName) {
         return sumStatisticsDao.findByMetricName(metricName);
     }
 
-    public void saveOrUpate(SumStatistics sumStatistics) {
-        sumStatisticsDao.save(sumStatistics);
+    public SumStatistics saveOrUpdate(SumStatistics sumStatistics) {
+        return sumStatisticsDao.save(sumStatistics);
     }
 
 }

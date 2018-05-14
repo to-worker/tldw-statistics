@@ -3,6 +3,7 @@ package com.zqykj.tldw.streaming.listener;
 import com.alibaba.fastjson.JSON;
 import com.zqykj.tldw.streaming.common.Constants;
 import com.zqykj.tldw.streaming.entity.BussinessStatistics;
+import com.zqykj.tldw.streaming.entity.ElpTypeStatistics;
 import com.zqykj.tldw.streaming.entity.SumStatistics;
 import com.zqykj.tldw.streaming.service.BussinessStatisticsService;
 import com.zqykj.tldw.streaming.service.SumStatisticsService;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -37,35 +40,28 @@ public class KafkaBussinessListeners {
 
     private Map<String, BussinessStatistics> bussinessStatisticsMap;
 
-    public KafkaBussinessListeners(Map<String, SumStatistics> sumStatisticsMap,
-            Map<String, BussinessStatistics> bussinessStatisticsMap) {
-        this.sumStatisticsMap = sumStatisticsMap;
-        this.bussinessStatisticsMap = bussinessStatisticsMap;
+    public KafkaBussinessListeners() {
     }
 
     @PostConstruct
     public void init() {
-        SumStatistics transSum = sumStatisticsService.findByMetricName(Constants.METRICS_TRANS);
-        if (null == transSum) {
-            transSum = new SumStatistics();
-            transSum.setMetricName(Constants.METRICS_TRANS);
-            transSum.setInTotalRecords(0L);
-            transSum.setOutTotalRecords(0L);
-            transSum.setRecordTime(new Date());
-            transSum.setStartTime(new Date());
-        }
 
-        SumStatistics loaderSum = sumStatisticsService.findByMetricName(Constants.METRICS_LOADER);
-        if (null == loaderSum) {
-            loaderSum = new SumStatistics();
-            loaderSum.setMetricName(Constants.METRICS_LOADER);
-            loaderSum.setInTotalRecords(0L);
-            loaderSum.setOutTotalRecords(0L);
-            loaderSum.setRecordTime(new Date());
-            loaderSum.setStartTime(new Date());
+        initStatistics(Constants.METRICS_TASK_TRANS);
+        initStatistics(Constants.METRICS_TASK_LOADER);
+        bussinessStatisticsMap = new HashMap<>();
+    }
+
+    public void initStatistics(String metricName) {
+        List<SumStatistics> statisticsList = sumStatisticsService.findByMetricName(metricName);
+        logger.info("metric:{}, statisticsList.size: {}", metricName, statisticsList.size());
+        sumStatisticsMap = new HashMap<>();
+        if (null != statisticsList && statisticsList.size() > 0) {
+            for (SumStatistics sumStatistics : statisticsList) {
+                sumStatisticsMap
+                        .put(sumStatistics.getMetricName() + Constants.METRICS_BUSSINESS_SEPERATOR + sumStatistics
+                                .getTaskId(), sumStatistics);
+            }
         }
-        sumStatisticsMap.put(Constants.METRICS_TRANS, transSum);
-        sumStatisticsMap.put(Constants.METRICS_LOADER, loaderSum);
     }
 
     /**
@@ -79,50 +75,115 @@ public class KafkaBussinessListeners {
 
         BussinessStatistics bussinessStatistics = JSON
                 .parseObject(record.value().toString(), BussinessStatistics.class);
-        bussinessStatistics.getRecordTime();
-
-        String metric = record.key().toString();
-        BussinessStatistics statistics = bussinessStatisticsMap.get(metric);
+        if (null == bussinessStatistics.getRecordTime()) {
+            logger.error("recordTime cat not be null.");
+            return;
+        }
+        if (null == bussinessStatistics.getMetricName() || null == bussinessStatistics.getTaskId()) {
+            logger.error("metricName or taskId cat not be null.");
+            return;
+        }
 
         Date recordTime = bussinessStatistics.getRecordTime();
         String formatTime = DateUtils.getWholeMinute(recordTime);
 
-        if (statistics.getRecordTime() != null) {
-            if (formatTime.equals(DateUtils.getWholeMinute(statistics.getRecordTime()))) {
-                statistics.setInTotalRecords(statistics.getInTotalRecords() + bussinessStatistics.getInTotalRecords());
-                statistics
-                        .setOutTotalRecords(statistics.getOutTotalRecords() + bussinessStatistics.getOutTotalRecords());
-                statistics.setEndTime(new Date());
-            } else {
-                SumStatistics sumStatistics = sumStatisticsMap.get(metric);
-                sumStatistics.setInTotalRecords(sumStatistics.getInTotalRecords() + statistics.getInTotalRecords());
-                sumStatistics.setOutTotalRecords(sumStatistics.getOutTotalRecords() + statistics.getOutTotalRecords());
-                sumStatistics.setRecordTime(new Date());
-                logger.info("sumStatistisc: {}", sumStatistics);
-                logger.info("bussinessStatistics: {}", statistics);
+        String metric = record.key().toString();
+        String busMetricTaskId = metric + Constants.METRICS_BUSSINESS_SEPERATOR + bussinessStatistics.getTaskId();
+        BussinessStatistics statisticsGather = bussinessStatisticsMap.get(busMetricTaskId);
 
-                sumStatisticsService.saveOrUpate(sumStatistics);
-                bussinessStatisticsService.save(statistics);
-                statistics = compactSumStatistics(bussinessStatistics, formatTime);
-                bussinessStatisticsMap.put(metric, statistics);
-            }
+        // 增加新的task指标
+        if (null == statisticsGather) {
+            statisticsGather = bussinessStatistics;
+            statisticsGather.setRecordTime(DateUtils.getDate(formatTime));
+            bussinessStatisticsMap.put(busMetricTaskId, statisticsGather);
+        }
+        SumStatistics sumStatistics = sumStatisticsMap.get(busMetricTaskId);
+        if (null == sumStatistics){
+            sumStatistics = compactSumStatistics(bussinessStatistics, formatTime);
+        }
+
+        verifyRecords(statisticsGather, bussinessStatistics);
+        updateSumStatistics(sumStatistics, bussinessStatistics);
+
+        if (formatTime.equals(DateUtils.getWholeMinute(statisticsGather.getRecordTime()))) {
+            updateValue(statisticsGather, bussinessStatistics);
         } else {
-            statistics = compactSumStatistics(bussinessStatistics, formatTime);
-            bussinessStatisticsMap.put(metric, statistics);
+            // 每批次更新一次总值
+            sumStatistics = sumStatisticsService.saveOrUpdate(sumStatistics);
+            sumStatisticsMap.put(busMetricTaskId, sumStatistics);
+
+            // 保存汇聚的结果
+            bussinessStatisticsService.save(statisticsGather);
+            logger.info("save bussinessStatistics: {}", statisticsGather);
+
+            // 更新指标
+            statisticsGather = compactBussStatistics(bussinessStatistics, formatTime);
+            logger.info("put new bussinessStatistics: {}", statisticsGather);
+            bussinessStatisticsMap.put(busMetricTaskId, statisticsGather);
         }
 
     }
 
-    private BussinessStatistics compactSumStatistics(BussinessStatistics bussinessStatistics, String formatTime) {
-        BussinessStatistics statistics = new BussinessStatistics();
-        statistics.setMetricName(bussinessStatistics.getMetricName());
-        statistics.setInTotalRecords(bussinessStatistics.getInTotalRecords());
-        statistics.setOutTotalRecords(bussinessStatistics.getOutTotalRecords());
-        statistics.setRecordTime(DateUtils.getDate(formatTime));
-        statistics.setEndTime(new Date());
-        statistics.setResId(bussinessStatistics.getResId());
-        statistics.setElpTypeStatistic(bussinessStatistics.getElpTypeStatistic());
-        return statistics;
+    private void updateSumStatistics(SumStatistics sumStatistics, BussinessStatistics bussinessStatistics) {
+        Long inTotal = sumStatistics.getInTotalRecords();
+        Long outTotal = sumStatistics.getOutTotalRecords();
+        if (null == inTotal) {
+            inTotal = 0L;
+        }
+        if (null == outTotal) {
+            outTotal = 0L;
+        }
+        sumStatistics.setInTotalRecords(inTotal + bussinessStatistics.getInTotalRecords());
+        sumStatistics.setOutTotalRecords(outTotal + bussinessStatistics.getOutTotalRecords());
+    }
+
+    private void updateValue(BussinessStatistics statisticsGather, BussinessStatistics bussinessStatistics) {
+        statisticsGather
+                .setInTotalRecords(statisticsGather.getInTotalRecords() + bussinessStatistics.getInTotalRecords());
+        statisticsGather
+                .setOutTotalRecords(statisticsGather.getInTotalRecords() + bussinessStatistics.getOutTotalRecords());
+        //            List<ElpTypeStatistics> elpTypeStatisticsList = statisticsGather.getElpTypeStatistic();
+        //            for (ElpTypeStatistics elpTypeCount: elpTypeStatisticsList){
+        //            }
+        statisticsGather.setEndTime(new Date());
+    }
+
+    private void verifyRecords(BussinessStatistics statisticsGather, BussinessStatistics bussinessStatistics) {
+        Long inTotal = statisticsGather.getInTotalRecords();
+        Long inTotalItem = bussinessStatistics.getInTotalRecords();
+        Long outTotal = statisticsGather.getOutTotalRecords();
+        Long outTotalItem = bussinessStatistics.getOutTotalRecords();
+        if (null == inTotal) {
+            statisticsGather.setInTotalRecords(0L);
+        }
+        if (null == inTotalItem) {
+            bussinessStatistics.setInTotalRecords(0L);
+        }
+        if (null == outTotal) {
+            statisticsGather.setOutTotalRecords(0L);
+        }
+        if (null == outTotalItem) {
+            bussinessStatistics.setOutTotalRecords(0L);
+        }
+    }
+
+    private BussinessStatistics compactBussStatistics(BussinessStatistics bussinessStatistics, String formatTime) {
+        bussinessStatistics.setRecordTime(DateUtils.getDate(formatTime));
+        return bussinessStatistics;
+    }
+
+    private SumStatistics compactSumStatistics(BussinessStatistics bussinessStatistics, String formatTime) {
+        SumStatistics sumStatistics = new SumStatistics();
+        sumStatistics.setMetricName(bussinessStatistics.getMetricName());
+        sumStatistics.setTaskId(bussinessStatistics.getTaskId());
+        sumStatistics.setResId(bussinessStatistics.getResId());
+        sumStatistics.setInTotalRecords(bussinessStatistics.getInTotalRecords());
+        sumStatistics.setOutTotalRecords(bussinessStatistics.getOutTotalRecords());
+        sumStatistics.setElpTypeStatistic(bussinessStatistics.getElpTypeStatistic());
+        sumStatistics.setRecordTime(new Date());
+        sumStatistics.setStartTime(new Date());
+        sumStatistics.setEndTime(new Date());
+        return sumStatistics;
     }
 
 }

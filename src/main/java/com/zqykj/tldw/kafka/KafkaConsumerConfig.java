@@ -55,15 +55,15 @@ public class KafkaConsumerConfig {
      */
     @Bean
     public KafkaBussinessListeners kafkaBussinessListeners() {
-        Map<String, SumStatistics> sumStatisticsMap = new HashMap<>();
-        Map<String, BussinessStatistics> bussinessStatisticsMap = new HashMap<>();
-        bussinessStatisticsMap.put(Constants.METRICS_TRANS, new BussinessStatistics());
-        bussinessStatisticsMap.put(Constants.METRICS_LOADER, new BussinessStatistics());
+//        Map<String, SumStatistics> sumStatisticsMap = new HashMap<>();
+//        Map<String, BussinessStatistics> bussinessStatisticsMap = new HashMap<>();
+//        bussinessStatisticsMap.put(Constants.METRICS_TRANS, new BussinessStatistics());
+//        bussinessStatisticsMap.put(Constants.METRICS_LOADER, new BussinessStatistics());
 
         //        sumStatisticsMap.put(Constants.METRICS_SUM_TRANS, new SumStatistics());
         //        sumStatisticsMap.put(Constants.METRICS_SUM_LOADER, new SumStatistics());
 
-        return new KafkaBussinessListeners(sumStatisticsMap, bussinessStatisticsMap);
+        return new KafkaBussinessListeners();
     }
 
     public ConsumerFactory<String, String> consumerFactory() {
