@@ -45,16 +45,16 @@ public class KafkaBussinessListeners {
 
     @PostConstruct
     public void init() {
-
+        sumStatisticsMap = new HashMap<>();
+        bussinessStatisticsMap = new HashMap<>();
         initStatistics(Constants.METRICS_TASK_TRANS);
         initStatistics(Constants.METRICS_TASK_LOADER);
-        bussinessStatisticsMap = new HashMap<>();
     }
 
     public void initStatistics(String metricName) {
         List<SumStatistics> statisticsList = sumStatisticsService.findByMetricName(metricName);
         logger.info("metric:{}, statisticsList.size: {}", metricName, statisticsList.size());
-        sumStatisticsMap = new HashMap<>();
+
         if (null != statisticsList && statisticsList.size() > 0) {
             for (SumStatistics sumStatistics : statisticsList) {
                 sumStatisticsMap
@@ -94,7 +94,7 @@ public class KafkaBussinessListeners {
         // 增加新的task指标
         if (null == statisticsGather) {
             statisticsGather = bussinessStatistics;
-            statisticsGather.setRecordTime(DateUtils.getDate(formatTime));
+            statisticsGather.setRecordTime(new Date());
             bussinessStatisticsMap.put(busMetricTaskId, statisticsGather);
         }
         SumStatistics sumStatistics = sumStatisticsMap.get(busMetricTaskId);
@@ -141,7 +141,7 @@ public class KafkaBussinessListeners {
         statisticsGather
                 .setInTotalRecords(statisticsGather.getInTotalRecords() + bussinessStatistics.getInTotalRecords());
         statisticsGather
-                .setOutTotalRecords(statisticsGather.getInTotalRecords() + bussinessStatistics.getOutTotalRecords());
+                .setOutTotalRecords(statisticsGather.getOutTotalRecords() + bussinessStatistics.getOutTotalRecords());
         //            List<ElpTypeStatistics> elpTypeStatisticsList = statisticsGather.getElpTypeStatistic();
         //            for (ElpTypeStatistics elpTypeCount: elpTypeStatisticsList){
         //            }
@@ -174,6 +174,7 @@ public class KafkaBussinessListeners {
 
     private SumStatistics compactSumStatistics(BussinessStatistics bussinessStatistics, String formatTime) {
         SumStatistics sumStatistics = new SumStatistics();
+        sumStatistics.setId(bussinessStatistics.getTaskId());
         sumStatistics.setMetricName(bussinessStatistics.getMetricName());
         sumStatistics.setTaskId(bussinessStatistics.getTaskId());
         sumStatistics.setResId(bussinessStatistics.getResId());

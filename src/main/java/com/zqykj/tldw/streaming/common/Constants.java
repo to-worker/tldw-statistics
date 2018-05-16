@@ -11,9 +11,6 @@ public interface Constants {
     String METRICS_TASK_TRANS = "trans.task.resid";
     String METRICS_TASK_LOADER = "load.task.resid";
 
-//    String METRICS_SUM_TRANS = "trans.sum.resid";
-//    String METRICS_SUM_LOADER = "load.sum.resid";
-
     String METRICS_BUSSINESS_SEPERATOR = "@";
 
 }

@@ -1,10 +1,5 @@
 package com.zqykj.tldw.kafka;
 
-import com.sun.corba.se.impl.orbutil.closure.Constant;
-import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
-import com.zqykj.tldw.streaming.common.Constants;
-import com.zqykj.tldw.streaming.entity.BussinessStatistics;
-import com.zqykj.tldw.streaming.entity.SumStatistics;
 import com.zqykj.tldw.streaming.listener.KafkaBussinessListeners;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -55,13 +50,6 @@ public class KafkaConsumerConfig {
      */
     @Bean
     public KafkaBussinessListeners kafkaBussinessListeners() {
-//        Map<String, SumStatistics> sumStatisticsMap = new HashMap<>();
-//        Map<String, BussinessStatistics> bussinessStatisticsMap = new HashMap<>();
-//        bussinessStatisticsMap.put(Constants.METRICS_TRANS, new BussinessStatistics());
-//        bussinessStatisticsMap.put(Constants.METRICS_LOADER, new BussinessStatistics());
-
-        //        sumStatisticsMap.put(Constants.METRICS_SUM_TRANS, new SumStatistics());
-        //        sumStatisticsMap.put(Constants.METRICS_SUM_LOADER, new SumStatistics());
 
         return new KafkaBussinessListeners();
     }

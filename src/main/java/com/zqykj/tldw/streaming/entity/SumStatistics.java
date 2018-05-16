@@ -27,6 +27,16 @@ public class SumStatistics implements Serializable {
     private Date startTime;
     private Date endTime;
 
+    /**
+     * 任务状态
+     */
+    private String state;
+
+    /**
+     * 任务结束时的状态
+     */
+    private String finalStatus;
+
     @Override
     public String toString() {
         return JSON.toJSONString(this);
@@ -110,5 +120,21 @@ public class SumStatistics implements Serializable {
 
     public void setEndTime(Date endTime) {
         this.endTime = endTime;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getFinalStatus() {
+        return finalStatus;
+    }
+
+    public void setFinalStatus(String finalStatus) {
+        this.finalStatus = finalStatus;
     }
 }
