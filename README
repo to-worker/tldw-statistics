@@ -1,0 +1,12 @@
+install
+解压
+tar -xvf tldw-statistics-0.0.1.jar
+
+cd tldw-statistics
+修改配置文件
+config/application.properties
+修改monogo地址,zk/kafka地址等.
+kafka topic不变
+
+get start
+./bin/tldw-statistics.sh restart

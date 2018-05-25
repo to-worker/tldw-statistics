@@ -29,14 +29,14 @@ current_dir=`dirname $0`
 start()
 {
 
-  pid=`ps aux |grep "[^]]java.*data-integration.*.jar"|  awk '{print $2}'`
+  pid=`ps aux |grep "[^]]java.*statistics.*.jar"|  awk '{print $2}'`
   if [ ! -z "$pid" ]
   then
     echo "Found existing service with process id $pid, will not start new"
     exit 1;
   fi
-  echo -n $"Starting  data-integration : "
-  nohup $JAVA_HOME/bin/java $JVM_OPTS -classpath data-integration-*.jar $JMX_OPTS -Dlogging.config=./config/logback-spring.xml -Djava.ext.dirs=lib/ com.zqykj.tldw.ApplicationServer 2>&1 &
+  echo -n $"Starting  statistics : "
+  nohup $JAVA_HOME/bin/java $JVM_OPTS -classpath statistics-*.jar $JMX_OPTS -Dlogging.config=./config/logback-spring.xml -Djava.ext.dirs=lib/ com.zqykj.tldw.Application 2>&1 &
   pid=$!
   RETVAL=$?
   [ $RETVAL -eq 0 ] && echo "$pid" > $PID_FILE
@@ -45,7 +45,7 @@ start()
 stop()
 {
   # kill existing process if available
-  echo -n $"Stopping data-integration: "
+  echo -n $"Stopping statistics: "
   if test -e "$PID_FILE"; then
     pid=`cat $PID_FILE`
     echo "Kill process $pid from pid file"
@@ -53,7 +53,7 @@ stop()
     RETVAL=0
     rm -f $PID_FILE
   else
-    pid=`ps aux |grep "[^]]java.*data-integration.*.jar"|  awk '{print $2}'`
+    pid=`ps aux |grep "[^]]java.*statistics.*.jar"|  awk '{print $2}'`
     if [ ! -z "$pid" ]
     then
       echo "Kill process $pid found in system"
