@@ -6,6 +6,8 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -15,6 +17,8 @@ import java.util.Properties;
  * @date 2018/6/1
  */
 public class WordCountDemo {
+
+    private static Logger logger = LoggerFactory.getLogger(WordCountDemo.class);
 
     public static Properties getProperties() {
         Properties props = new Properties();
