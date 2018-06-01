@@ -72,7 +72,6 @@ public class KafkaBussinessListeners {
      */
     @KafkaListener(topics = { "Statistics" })
     public void listen(ConsumerRecord<?, ?> record) {
-
         BussinessStatistics bussinessStatistics = JSON
                 .parseObject(record.value().toString(), BussinessStatistics.class);
         if (null == bussinessStatistics.getRecordTime()) {
